@@ -11,8 +11,11 @@ object StrukOcrParser {
         "total", "tunai", "kembali", "kasir", "jl.", "jalan", "telp", "hp",
         "terima kasih", "nota", "faktur", "tanggal", "jam", "subtotal",
         "diskon", "pajak", "ppn", "admin", "bca", "qris", "debit", "kredit",
-        "cash", "change", "sub total", "store", "shop", "merchant"
+        "cash", "change", "sub total", "store", "shop", "merchant",
+        "catatan", "belanja", "toko", "warung", "lunas", "sisa", "kembalian"
     )
+
+    private val invalidNameWords = listOf("rp", "idr", "harga", "subtotal", "total", "tunai", "kembali")
 
     fun parse(rawText: String): List<ParsedReceiptItem> {
         val lines = rawText.split("\n")
@@ -36,6 +39,62 @@ object StrukOcrParser {
         val lineWithoutBullet = line.replaceFirst(Regex("^\\d+[\"\\.\\)]\\s*"), "").trim()
         if (lineWithoutBullet.isBlank()) return null
 
+        // 1. Try regex pattern: Qty + Item Name + Price (e.g. "9 Lifebuoy cair 16.000", "1 caplang 30ml 10.500", "7 micelar gcg 300 31.000", "2x Indomie Goreng 3.500")
+        val qtyNamePriceRegex = Regex("^(\\d+)(?:\\s*[xX]|\\s*pcs|\\s*bks)?\\s+(.+?)\\s+([Rr][pP]?\\s*[\\d\\.,]+(?:\\s*(?:k|rb|ribu|jt|juta)+)?)$", RegexOption.IGNORE_CASE)
+        val matchResult = qtyNamePriceRegex.find(lineWithoutBullet)
+        if (matchResult != null) {
+            val qtyStr = matchResult.groupValues[1]
+            val nameStr = matchResult.groupValues[2].trim()
+            val priceStr = matchResult.groupValues[3]
+
+            val qty = qtyStr.toIntOrNull() ?: 1
+            val price = parsePrice(priceStr)
+            if (price != null && isValidItemName(nameStr)) {
+                return ParsedReceiptItem(
+                    namaBarang = nameStr,
+                    quantity = qty,
+                    harga = price
+                )
+            }
+        }
+
+        // 2. Try regex pattern: Item Name + Qty + Price (e.g. "Indomie Goreng 2 3.500")
+        val nameQtyPriceRegex = Regex("^(.+?)\\s+(\\d+)(?:\\s*[xX]|\\s*pcs|\\s*bks)?\\s+([Rr][pP]?\\s*[\\d\\.,]+(?:\\s*(?:k|rb|ribu|jt|juta)+)?)$", RegexOption.IGNORE_CASE)
+        val nameQtyMatch = nameQtyPriceRegex.find(lineWithoutBullet)
+        if (nameQtyMatch != null) {
+            val nameStr = nameQtyMatch.groupValues[1].trim()
+            val qtyStr = nameQtyMatch.groupValues[2]
+            val priceStr = nameQtyMatch.groupValues[3]
+
+            val qty = qtyStr.toIntOrNull() ?: 1
+            val price = parsePrice(priceStr)
+            if (price != null && isValidItemName(nameStr)) {
+                return ParsedReceiptItem(
+                    namaBarang = nameStr,
+                    quantity = qty,
+                    harga = price
+                )
+            }
+        }
+
+        // 3. Try regex pattern: Item Name + Price (e.g. "Minyak Goreng 14.000")
+        val namePriceRegex = Regex("^(.+?)\\s+([Rr][pP]?\\s*[\\d\\.,]+(?:\\s*(?:k|rb|ribu|jt|juta)+)?)$", RegexOption.IGNORE_CASE)
+        val nameMatchResult = namePriceRegex.find(lineWithoutBullet)
+        if (nameMatchResult != null) {
+            val nameStr = nameMatchResult.groupValues[1].trim()
+            val priceStr = nameMatchResult.groupValues[2]
+
+            val price = parsePrice(priceStr)
+            if (price != null && isValidItemName(nameStr)) {
+                return ParsedReceiptItem(
+                    namaBarang = nameStr,
+                    quantity = 1,
+                    harga = price
+                )
+            }
+        }
+
+        // 4. Fallback to token-based parsing
         val words = lineWithoutBullet.split(Regex("\\s+")).toMutableList()
         if (words.size < 2) return null
 
@@ -59,7 +118,7 @@ object StrukOcrParser {
         }
 
         val itemName = words.joinToString(" ").trim().removeSurrounding("-", "").trim()
-        if (itemName.isBlank()) return null
+        if (!isValidItemName(itemName)) return null
 
         return ParsedReceiptItem(
             namaBarang = itemName,
@@ -68,28 +127,60 @@ object StrukOcrParser {
         )
     }
 
-    private fun parsePrice(token: String): Double? {
-        val clean = token.replace(Regex("[^0-9.,]"), "")
-        if (clean.isBlank()) return null
+    private fun isValidItemName(name: String): Boolean {
+        if (name.isBlank() || !name.contains(Regex("[a-zA-Z]"))) return false
+        val lower = name.lowercase()
+        if (invalidNameWords.any { lower == it || lower.startsWith("$it ") }) return false
+        return true
+    }
 
-        val normalized = if (clean.contains(".") && clean.contains(",")) {
-            clean.replace(".", "").replace(",", ".")
-        } else if (clean.contains(".")) {
-            if (clean.count { it == '.' } > 1 || clean.substringAfterLast('.').length == 3) {
-                clean.replace(".", "")
-            } else {
-                clean
-            }
-        } else if (clean.contains(",")) {
-            if (clean.count { it == ',' } > 1 || clean.substringAfterLast(',').length == 3) {
-                clean.replace(",", "")
-            } else {
-                clean.replace(",", ".")
-            }
-        } else {
-            clean
+    private fun parsePrice(token: String): Double? {
+        var clean = token.trim()
+        // Remove currency prefix/suffix
+        clean = clean.replace(Regex("^(?:[rR][pP]|[iI][dD][rR])\\s*"), "")
+        clean = clean.replace(Regex("\\s*(?:,-|-)$"), "")
+
+        var multiplier = 1.0
+        val lower = clean.lowercase()
+        if (lower.contains("jt") || lower.contains("juta")) {
+            multiplier = 1_000_000.0
+            clean = clean.replace(Regex("(?i)(?:jt|juta)"), "")
+        } else if (lower.contains("rb") || lower.contains("ribu") || lower.contains("k")) {
+            multiplier = 1_000.0
+            clean = clean.replace(Regex("(?i)(?:rb|ribu|k)"), "")
         }
 
-        return normalized.toDoubleOrNull()
+        // Fix OCR confusions in numbers: O -> 0, l/I -> 1, S -> 5, etc.
+        clean = clean.replace('O', '0')
+            .replace('o', '0')
+            .replace('l', '1')
+            .replace('I', '1')
+            .replace('S', '5')
+            .replace('s', '5')
+            .replace('B', '8')
+
+        val numClean = clean.replace(Regex("[^0-9.,]"), "")
+        if (numClean.isBlank()) return null
+
+        val normalized = if (numClean.contains(".") && numClean.contains(",")) {
+            numClean.replace(".", "").replace(",", ".")
+        } else if (numClean.contains(".")) {
+            if (numClean.count { it == '.' } > 1 || numClean.substringAfterLast('.').length == 3) {
+                numClean.replace(".", "")
+            } else {
+                numClean
+            }
+        } else if (numClean.contains(",")) {
+            if (numClean.count { it == ',' } > 1 || numClean.substringAfterLast(',').length == 3) {
+                numClean.replace(",", "")
+            } else {
+                numClean.replace(",", ".")
+            }
+        } else {
+            numClean
+        }
+
+        val baseValue = normalized.toDoubleOrNull() ?: return null
+        return baseValue * multiplier
     }
 }

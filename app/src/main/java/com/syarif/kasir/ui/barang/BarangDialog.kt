@@ -141,18 +141,23 @@ fun BarangDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val hargaBeliText = if (dialogState.hargaBeli == "0" || dialogState.hargaBeli == "0.0" || dialogState.hargaBeli.isBlank()) "" else dialogState.hargaBeli
+                    val hargaJualText = if (dialogState.hargaJual == "0" || dialogState.hargaJual == "0.0" || dialogState.hargaJual.isBlank()) "" else dialogState.hargaJual
+
                     OutlinedTextField(
-                        value = dialogState.hargaBeli,
+                        value = hargaBeliText,
                         onValueChange = onHargaBeliChange,
                         label = { Text("Harga Beli (Rp)") },
+                        placeholder = { Text("0") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
                     )
                     OutlinedTextField(
-                        value = dialogState.hargaJual,
+                        value = hargaJualText,
                         onValueChange = onHargaJualChange,
                         label = { Text("Harga Jual * (Rp)") },
+                        placeholder = { Text("0") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -165,10 +170,13 @@ fun BarangDialog(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
+                    val stokText = if (dialogState.stok == "0" || dialogState.stok == "0.0" || dialogState.stok.isBlank()) "" else dialogState.stok
+
                     OutlinedTextField(
-                        value = dialogState.stok,
+                        value = stokText,
                         onValueChange = onStokChange,
                         label = { Text("Stok") },
+                        placeholder = { Text("0") },
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                         singleLine = true,
                         modifier = Modifier.weight(1f)
@@ -224,23 +232,28 @@ fun BarangDialog(
                             horizontalArrangement = Arrangement.spacedBy(8.dp),
                             verticalAlignment = Alignment.CenterVertically
                         ) {
+                            val minQtyText = if (tier.minQty == "0" || tier.minQty.isBlank()) "" else tier.minQty
+                            val hargaGrosirText = if (tier.hargaGrosir == "0" || tier.hargaGrosir == "0.0" || tier.hargaGrosir.isBlank()) "" else tier.hargaGrosir
+
                             OutlinedTextField(
-                                value = tier.minQty,
+                                value = minQtyText,
                                 onValueChange = { newMinQty ->
                                     onUpdateTier(index, newMinQty, tier.hargaGrosir)
                                 },
                                 label = { Text("Min Qty") },
+                                placeholder = { Text("0") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.weight(1f)
                             )
 
                             OutlinedTextField(
-                                value = tier.hargaGrosir,
+                                value = hargaGrosirText,
                                 onValueChange = { newHarga ->
                                     onUpdateTier(index, tier.minQty, newHarga)
                                 },
                                 label = { Text("Harga Grosir") },
+                                placeholder = { Text("0") },
                                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                                 singleLine = true,
                                 modifier = Modifier.weight(1.3f)

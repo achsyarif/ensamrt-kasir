@@ -11,6 +11,7 @@ import com.syarif.kasir.data.remote.dto.TambahBarangCepatRequest
 import com.syarif.kasir.data.remote.dto.PelunasanRequest
 import com.syarif.kasir.data.remote.dto.TambahPelangganRequest
 import com.syarif.kasir.data.remote.dto.TransaksiDto
+import com.syarif.kasir.data.remote.dto.UpdateBarangRequest
 import com.syarif.kasir.data.sync.SyncEngine
 import com.syarif.kasir.data.sync.SyncResult
 import com.syarif.kasir.data.sync.SyncSummary
@@ -77,6 +78,25 @@ open class KasirRepository(
             val mappedList = hargaGrosirList.map { it.copy(barangId = barang.id) }
             hargaGrosirDao.insertHargaGrosirList(mappedList)
         }
+        try {
+            val request = UpdateBarangRequest(
+                id = barang.id.toString(),
+                kodeBarang = barang.kodeBarang,
+                namaBarang = barang.namaBarang,
+                kategori = barang.kategori,
+                hargaBeli = barang.hargaBeli.toString(),
+                hargaJual = barang.hargaJual.toString(),
+                stok = barang.stok.toString(),
+                qty = barang.stok.toString(),
+                satuan = barang.satuan,
+                barcode = barang.barcode,
+                catatan = null
+            )
+            val response = apiService?.editBarang(action = "edit", request = request)
+            if (response == null || !response.isSuccessful) {
+                apiService?.updateBarang(action = "update", request = request)
+            }
+        } catch (_: Exception) {}
     }
 
     open suspend fun deleteBarang(barang: BarangEntity) {
@@ -87,11 +107,11 @@ open class KasirRepository(
         } catch (_: Exception) {}
     }
 
-    open suspend fun tambahBarangCepat(namaBarang: String, hargaJual: Double) {
+    open suspend fun tambahBarangCepat(namaBarang: String, hargaJual: Double, stok: Int = 0) {
         try {
             apiService?.tambahBarangCepat(
                 action = "tambah_cepat",
-                request = TambahBarangCepatRequest(namaBarang = namaBarang, hargaJual = hargaJual)
+                request = TambahBarangCepatRequest(namaBarang = namaBarang, hargaJual = hargaJual, stok = stok)
             )
         } catch (_: Exception) {}
     }
@@ -131,7 +151,17 @@ open class KasirRepository(
     open suspend fun insertTransaksi(
         transaksi: TransaksiEntity,
         details: List<DetailTransaksiEntity>
-    ): Long = transaksiDao!!.insertFullTransaksi(transaksi, details)
+    ): Long {
+        val insertedId = transaksiDao!!.insertFullTransaksi(transaksi, details)
+        details.forEach { detail ->
+            val barang = barangDao?.getBarangById(detail.barangId)
+            if (barang != null) {
+                val updatedStock = barang.stok - detail.jumlah
+                updateBarang(barang.copy(stok = updatedStock, isSynced = false))
+            }
+        }
+        return insertedId
+    }
 
     open suspend fun deleteTransaksi(id: Long) {
         transaksiDao?.purgeTransaksi(id.toInt())

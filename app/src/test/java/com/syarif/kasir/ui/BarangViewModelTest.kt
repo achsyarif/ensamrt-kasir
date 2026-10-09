@@ -161,9 +161,45 @@ class BarangViewModelTest {
         assertEquals(5, dState.barangId)
         assertEquals("K05", dState.kodeBarang)
         assertEquals("Susu UHT", dState.namaBarang)
+        assertEquals("4000", dState.hargaBeli)
+        assertEquals("6000", dState.hargaJual)
+        assertEquals("20", dState.stok)
         assertEquals(1, dState.tieredPrices.size)
         assertEquals("12", dState.tieredPrices[0].minQty)
         assertEquals("5500", dState.tieredPrices[0].hargaGrosir)
+    }
+
+    @Test
+    fun testOpenEditDialogZeroValuesEmptyFields() = runTest {
+        val item = BarangWithHargaGrosir(
+            barang = BarangEntity(
+                id = 6,
+                kodeBarang = "K06",
+                namaBarang = "Barang Kosong",
+                kategori = "Umum",
+                hargaBeli = 0.0,
+                hargaJual = 0.0,
+                stok = 0,
+                satuan = "pcs"
+            ),
+            hargaGrosirList = listOf(
+                HargaGrosirEntity(id = 2, barangId = 6, minQty = 0, hargaGrosir = 0.0)
+            )
+        )
+
+        val viewModel = BarangViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.openEditDialog(item)
+        val dState = viewModel.uiState.value.dialogState
+
+        assertTrue(viewModel.uiState.value.isDialogOpen)
+        assertEquals("", dState.hargaBeli)
+        assertEquals("", dState.hargaJual)
+        assertEquals("", dState.stok)
+        assertEquals(1, dState.tieredPrices.size)
+        assertEquals("", dState.tieredPrices[0].minQty)
+        assertEquals("", dState.tieredPrices[0].hargaGrosir)
     }
 
     @Test

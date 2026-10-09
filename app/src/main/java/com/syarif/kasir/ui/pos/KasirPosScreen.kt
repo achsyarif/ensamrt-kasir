@@ -556,8 +556,8 @@ fun LeftColumnSection(
                 modifier = Modifier
                     .fillMaxWidth()
                     .weight(1f),
-                horizontalArrangement = Arrangement.spacedBy(6.dp),
-                verticalArrangement = Arrangement.spacedBy(6.dp),
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+                verticalArrangement = Arrangement.spacedBy(4.dp),
                 contentPadding = PaddingValues(bottom = 8.dp, top = 0.dp)
             ) {
                 items(
@@ -761,13 +761,14 @@ fun PosBarangCard(
     modifier: Modifier = Modifier
 ) {
     val barang = item.barang
-    val hasGrosir = item.hargaGrosirList.isNotEmpty()
+    val validGrosirList = item.hargaGrosirList.filter { it.hargaGrosir > 0 }.sortedBy { it.minQty }
+    val hasGrosir = validGrosirList.isNotEmpty()
 
     OutlinedCard(
         modifier = modifier
             .fillMaxWidth()
             .clickable(onClick = onClick),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(10.dp),
         colors = CardDefaults.outlinedCardColors(
             containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f)
         ),
@@ -775,23 +776,24 @@ fun PosBarangCard(
     ) {
         Column(
             modifier = Modifier
-                .padding(8.dp)
+                .padding(6.dp)
                 .fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.Top
+                verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
                     text = barang.namaBarang,
-                    style = MaterialTheme.typography.bodyMedium,
+                    style = MaterialTheme.typography.bodySmall,
                     fontWeight = FontWeight.Bold,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                     modifier = Modifier.weight(1f)
                 )
                 if (hasGrosir) {
+                    Spacer(modifier = Modifier.width(4.dp))
                     Badge(
                         containerColor = MaterialTheme.colorScheme.tertiaryContainer,
                         contentColor = MaterialTheme.colorScheme.onTertiaryContainer
@@ -801,21 +803,39 @@ fun PosBarangCard(
                 }
             }
 
-            Spacer(modifier = Modifier.height(2.dp))
+            Spacer(modifier = Modifier.height(1.dp))
             Text(
                 text = "Stok: ${barang.stok}",
                 style = MaterialTheme.typography.labelSmall,
                 color = if (barang.stok > 0) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error
             )
 
-            Spacer(modifier = Modifier.height(4.dp))
+            Spacer(modifier = Modifier.height(2.dp))
 
             Text(
                 text = barang.hargaJual.toRupiah(),
-                style = MaterialTheme.typography.bodyMedium,
+                style = MaterialTheme.typography.bodySmall,
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.primary
             )
+
+            if (hasGrosir) {
+                Spacer(modifier = Modifier.height(2.dp))
+                Column(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalArrangement = Arrangement.spacedBy(1.dp)
+                ) {
+                    validGrosirList.take(3).forEach { tier ->
+                        Text(
+                            text = "${tier.minQty}qty ${tier.hargaGrosir.toRupiah()}",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.secondary,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
+                    }
+                }
+            }
         }
     }
 }
@@ -1641,7 +1661,7 @@ fun ReceiptDialog(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = formatTransactionDate(tx.waktuTransaksi, tx.tanggal),
+                    text = "${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)} #${tx.id}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

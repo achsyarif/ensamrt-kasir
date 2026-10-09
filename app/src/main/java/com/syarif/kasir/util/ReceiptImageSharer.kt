@@ -205,7 +205,7 @@ object ReceiptImageSharer {
         canvas.drawText("Gelanggang RT 001/008 Pamotan", centerX, drawY + (15f * scale), subtitlePaint)
         drawY += 24f * scale
 
-        canvas.drawText(formatTransactionDate(tx.waktuTransaksi, tx.tanggal), centerX, drawY + (15f * scale), regularCenterPaint)
+        canvas.drawText("${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)} #${tx.id}", centerX, drawY + (15f * scale), regularCenterPaint)
         drawY += 24f * scale
 
         drawY += 8f * scale

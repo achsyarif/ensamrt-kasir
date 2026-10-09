@@ -56,7 +56,8 @@ class RiwayatViewModel(
     private fun filterTransaksi(list: List<TransaksiWithDetails>, query: String): List<TransaksiWithDetails> {
         if (query.isBlank()) return list
         return list.filter { item ->
-            item.transaksi.noFaktur.contains(query, ignoreCase = true) ||
+            item.transaksi.id.toString().contains(query, ignoreCase = true) ||
+                    item.transaksi.noFaktur.contains(query, ignoreCase = true) ||
                     (item.transaksi.namaPelanggan?.contains(query, ignoreCase = true) == true) ||
                     item.transaksi.metodePembayaran.contains(query, ignoreCase = true)
         }

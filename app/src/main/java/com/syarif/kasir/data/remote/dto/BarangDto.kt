@@ -20,7 +20,10 @@ data class BarangDto(
     @Json(name = "kategori") val kategori: String? = null,
     @Json(name = "harga_beli") val hargaBeli: Double? = 0.0,
     @Json(name = "harga_jual") val hargaJual: Double? = 0.0,
-    @Json(name = "stok") val stok: Int? = 0,
+    @Json(name = "stok") val stok: Int? = null,
+    @Json(name = "qty") val qty: Int? = null,
+    @Json(name = "stock") val stock: Int? = null,
+    @Json(name = "jumlah") val jumlah: Int? = null,
     @Json(name = "satuan") val satuan: String? = "pcs",
     @Json(name = "barcode") val barcode: String? = null,
     @Json(name = "harga_grosir") val hargaGrosirList: List<HargaGrosirDto>? = null,
@@ -28,6 +31,9 @@ data class BarangDto(
     @Json(name = "is_archived") val isArchived: Boolean? = null,
     @Json(name = "updated_at") val updatedAt: String? = null
 ) {
+    val effectiveStok: Int
+        get() = stok ?: stock ?: qty ?: jumlah ?: 0
+
     val effectiveHargaGrosirList: List<HargaGrosirDto>?
         get() = hargaGrosirList ?: grosirList
 }

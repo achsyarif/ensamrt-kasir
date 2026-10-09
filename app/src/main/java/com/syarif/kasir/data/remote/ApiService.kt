@@ -37,6 +37,18 @@ interface ApiService {
         @Body request: HapusBarangRequest
     ): Response<ResponseBody>
 
+    @POST("barang.php")
+    suspend fun editBarang(
+        @Query("action") action: String = "edit",
+        @Body request: UpdateBarangRequest
+    ): Response<ResponseBody>
+
+    @POST("barang.php")
+    suspend fun updateBarang(
+        @Query("action") action: String = "update",
+        @Body request: UpdateBarangRequest
+    ): Response<ResponseBody>
+
     @GET("pelanggan.php")
     suspend fun getPelanggan(
         @Query("action") action: String = "baca"

@@ -1,11 +1,13 @@
 package com.syarif.kasir.ui.navigation
 
+import android.widget.Toast
 import androidx.activity.compose.BackHandler
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.gestures.detectHorizontalDragGestures
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -32,6 +34,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -83,12 +86,40 @@ fun MainScreen(modifier: Modifier = Modifier) {
 
     var currentTab by remember { mutableStateOf(NavTab.POS) }
     var isMenuOpen by remember { mutableStateOf(false) }
+    var backPressedTime by remember { mutableStateOf(0L) }
 
     BackHandler(enabled = isMenuOpen) {
         isMenuOpen = false
     }
 
-    Box(modifier = modifier.fillMaxSize()) {
+    BackHandler(enabled = !isMenuOpen) {
+        val currentTime = System.currentTimeMillis()
+        if (currentTime - backPressedTime < 2000L) {
+            (context as? android.app.Activity)?.finish()
+        } else {
+            backPressedTime = currentTime
+            Toast.makeText(context, "Tekan sekali lagi untuk keluar", Toast.LENGTH_SHORT).show()
+        }
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .pointerInput(Unit) {
+                val edgeThreshold = 48.dp.toPx()
+                var isNearRightEdge = false
+                detectHorizontalDragGestures(
+                    onDragStart = { offset ->
+                        isNearRightEdge = offset.x >= (size.width - edgeThreshold)
+                    },
+                    onHorizontalDrag = { _, dragAmount ->
+                        if (isNearRightEdge && dragAmount < -10) {
+                            isMenuOpen = true
+                        }
+                    }
+                )
+            }
+    ) {
         Box(modifier = Modifier.fillMaxSize()) {
             when (currentTab) {
                 NavTab.KATALOG -> BarangScreen(

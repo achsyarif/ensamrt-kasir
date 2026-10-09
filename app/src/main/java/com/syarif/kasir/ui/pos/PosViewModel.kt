@@ -353,7 +353,7 @@ class PosViewModel(
                     kategori = "Umum",
                     hargaBeli = 0.0,
                     hargaJual = hargaJual,
-                    stok = 100,
+                    stok = 0,
                     satuan = "pcs",
                     isSynced = false,
                     updatedAt = System.currentTimeMillis()
@@ -363,7 +363,7 @@ class PosViewModel(
                 val insertedBarang = newBarang.copy(id = finalId)
 
                 try {
-                    repository.tambahBarangCepat(nama.trim(), hargaJual)
+                    repository.tambahBarangCepat(nama.trim(), hargaJual, 0)
                 } catch (_: Exception) {}
 
                 val itemWithGrosir = BarangWithHargaGrosir(
@@ -427,7 +427,7 @@ class PosViewModel(
                             kategori = "Struk AI",
                             hargaBeli = 0.0,
                             hargaJual = item.harga,
-                            stok = 100,
+                            stok = 0,
                             satuan = "pcs",
                             isSynced = false,
                             updatedAt = System.currentTimeMillis()
@@ -437,7 +437,7 @@ class PosViewModel(
                         val insertedBarang = newBarang.copy(id = finalId)
 
                         try {
-                            repository.tambahBarangCepat(item.namaBarang.trim(), item.harga)
+                            repository.tambahBarangCepat(item.namaBarang.trim(), item.harga, 0)
                         } catch (_: Exception) {}
 
                         val itemWithGrosir = BarangWithHargaGrosir(
@@ -773,7 +773,7 @@ class PosViewModel(
 
                 cart.forEach { cartItem ->
                     val barang = cartItem.barang
-                    val updatedStock = (barang.stok - cartItem.quantity).coerceAtLeast(0)
+                    val updatedStock = barang.stok - cartItem.quantity
                     repository.updateBarang(
                         barang.copy(stok = updatedStock, isSynced = false),
                         cartItem.hargaGrosirList
@@ -868,7 +868,7 @@ class PosViewModel(
                     kategori = "Umum",
                     hargaBeli = 0.0,
                     hargaJual = detail.hargaSatuan,
-                    stok = 100,
+                    stok = 0,
                     satuan = "pcs"
                 ),
                 hargaGrosirList = emptyList()

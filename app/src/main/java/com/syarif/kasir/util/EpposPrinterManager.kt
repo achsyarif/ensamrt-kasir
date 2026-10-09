@@ -60,7 +60,7 @@ object EpposPrinterManager {
             outputStream.write(fontA)
             outputStream.write("Gelanggang RT 001/008 Pamotan\n".toByteArray(Charsets.UTF_8))
             val tx = transaction.transaksi
-            outputStream.write("${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)}\n".toByteArray(Charsets.UTF_8))
+            outputStream.write("${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)} #${tx.id}\n".toByteArray(Charsets.UTF_8))
             outputStream.write(separator.toByteArray(Charsets.UTF_8))
 
             // Items (Left aligned, crisp Font A)
@@ -151,7 +151,7 @@ object EpposPrinterManager {
         val sisa = transaction.effectiveSisa
         val isFullTunaiOrTransfer = isTunaiOrTransfer && (tx.sisa <= 0.0 || tx.bayar >= tx.totalHarga || sisa <= 0.0)
 
-        sb.append("${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)}\n")
+        sb.append("${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)} #${tx.id}\n")
         sb.append(separator)
         for (detail in transaction.details) {
             val name = detail.namaBarang

@@ -78,7 +78,7 @@ fun RiwayatTransaksiScreen(
                 modifier = Modifier
                     .fillMaxWidth()
                     .padding(vertical = 8.dp),
-                placeholder = { Text("Cari transaksi (no faktur, pelanggan)...") },
+                placeholder = { Text("cari transaksi (id, pelanggan)") },
                 leadingIcon = {
                     Icon(imageVector = Icons.Default.Search, contentDescription = null)
                 },
@@ -261,7 +261,7 @@ fun TransaksiCard(
                 )
                 Spacer(modifier = Modifier.height(4.dp))
                 Text(
-                    text = formatTransactionDate(tx.waktuTransaksi, tx.tanggal),
+                    text = "${formatTransactionDate(tx.waktuTransaksi, tx.tanggal)} #${tx.id}",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )

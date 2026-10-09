@@ -30,6 +30,8 @@ class SyncEngineTest {
         override suspend fun tambahBarang(action: String, request: TambahBarangRequest) = throw NotImplementedError()
         override suspend fun tambahBarangCepat(action: String, request: TambahBarangCepatRequest) = throw NotImplementedError()
         override suspend fun hapusBarang(action: String, request: HapusBarangRequest) = throw NotImplementedError()
+        override suspend fun editBarang(action: String, request: UpdateBarangRequest) = throw NotImplementedError()
+        override suspend fun updateBarang(action: String, request: UpdateBarangRequest) = throw NotImplementedError()
         override suspend fun getPelanggan(action: String) = throw NotImplementedError()
         override suspend fun savePelanggan(action: String, pelanggan: PelangganDto) = throw NotImplementedError()
         override suspend fun tambahPelanggan(action: String, request: TambahPelangganRequest) = throw NotImplementedError()
@@ -41,6 +43,7 @@ class SyncEngineTest {
         override suspend fun saveSingleTransaksi(action: String, transaksi: TransaksiDto) = throw NotImplementedError()
         override suspend fun simpanTransaksi(action: String, request: SimpanTransaksiRequest) = throw NotImplementedError()
         override suspend fun hapusTransaksi(action: String, request: HapusTransaksiRequest) = throw NotImplementedError()
+        override suspend fun pelunasanLunas(action: String, request: PelunasanRequest) = throw NotImplementedError()
     }
 
     private val dummyBarangDao = object : BarangDao {
@@ -131,7 +134,8 @@ class SyncEngineTest {
             namaBarang = "Kopi Susu",
             hargaBeli = 5000.0,
             hargaJual = 10000.0,
-            stok = 50
+            stok = 50,
+            qty = null
         )
 
         assertEquals(1, dto.id)
@@ -140,6 +144,55 @@ class SyncEngineTest {
         assertEquals(5000.0, dto.hargaBeli!!, 0.001)
         assertEquals(10000.0, dto.hargaJual!!, 0.001)
         assertEquals(50, dto.stok!!)
+        assertEquals(50, dto.effectiveStok)
+
+        val dtoWithQty = BarangDto(
+            id = 2,
+            namaBarang = "Teh",
+            stok = null,
+            qty = 25
+        )
+        assertEquals(25, dtoWithQty.effectiveStok)
+    }
+
+    @Test
+    fun testBarangDtoQtyMapping() {
+        val map = mapOf(
+            "id" to 10,
+            "nama_barang" to "Barang Qty Test",
+            "qty" to 15
+        )
+        val dto = syncEngine.mapToBarangDto(map)
+        assertEquals(15, dto.effectiveStok)
+
+        val mapStok = mapOf(
+            "id" to 11,
+            "nama_barang" to "Barang Stok Test",
+            "stok" to 20
+        )
+        val dtoStok = syncEngine.mapToBarangDto(mapStok)
+        assertEquals(20, dtoStok.effectiveStok)
+    }
+
+    @Test
+    fun testTambahBarangRequestsStockQtyFields() {
+        val tambahReq = TambahBarangRequest(
+            namaBarang = "Kopi Milk",
+            hargaJual = 15000.0,
+            stok = 10,
+            qty = 10
+        )
+        assertEquals("Kopi Milk", tambahReq.namaBarang)
+        assertEquals(10, tambahReq.stok)
+        assertEquals(10, tambahReq.qty)
+
+        val tambahCepatDefault = TambahBarangCepatRequest(
+            namaBarang = "Es Batu",
+            hargaJual = 2000.0
+        )
+        assertEquals("Es Batu", tambahCepatDefault.namaBarang)
+        assertEquals(0, tambahCepatDefault.stok)
+        assertNull(tambahCepatDefault.qty)
     }
 
     @Test

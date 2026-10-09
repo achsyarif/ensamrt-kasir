@@ -52,9 +52,12 @@ class FakePosKasirRepository : KasirRepository(null, null) {
         return newId.toLong()
     }
 
-    override suspend fun tambahBarangCepat(namaBarang: String, hargaJual: Double) {
+    var lastTambahBarangCepatStok: Int? = null
+
+    override suspend fun tambahBarangCepat(namaBarang: String, hargaJual: Double, stok: Int) {
         lastTambahBarangCepatNama = namaBarang
         lastTambahBarangCepatHarga = hargaJual
+        lastTambahBarangCepatStok = stok
     }
 
     override suspend fun insertPelanggan(pelanggan: PelangganEntity): Long {
@@ -74,7 +77,16 @@ class FakePosKasirRepository : KasirRepository(null, null) {
         barang: BarangEntity,
         hargaGrosirList: List<HargaGrosirEntity>
     ) {
-        // no-op in fake repository
+        val currentList = barangFlow.value.toMutableList()
+        val index = currentList.indexOfFirst { it.barang.id == barang.id }
+        if (index >= 0) {
+            currentList[index] = currentList[index].copy(barang = barang, hargaGrosirList = hargaGrosirList)
+            barangFlow.value = currentList
+        }
+        val insertedIndex = insertedBarangList.indexOfFirst { it.id == barang.id }
+        if (insertedIndex >= 0) {
+            insertedBarangList[insertedIndex] = barang
+        }
     }
 
     val insertedTransaksiList = mutableListOf<TransaksiWithDetails>()
@@ -438,5 +450,75 @@ class PosViewModelTest {
 
         assertEquals(1, repository.insertedTransaksiList.size)
         assertNull(viewModel.uiState.value.selectedPelanggan)
+    }
+
+    @Test
+    fun testCheckoutZeroOrNegativeStockAllowedAndDecrementsStock() = runTest {
+        val viewModel = PosViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val itemZeroStock = BarangWithHargaGrosir(
+            barang = baseBarang.copy(id = 10, stok = 0),
+            hargaGrosirList = emptyList()
+        )
+        repository.barangFlow.value = listOf(itemZeroStock)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.addToCart(itemZeroStock, 2)
+        assertEquals(1, viewModel.uiState.value.cartItems.size)
+        assertEquals(2, viewModel.uiState.value.cartItems[0].quantity)
+
+        viewModel.openCheckoutDialog()
+        viewModel.updatePaymentMethod("TUNAI")
+        viewModel.updateNominalPaid("20000")
+
+        viewModel.processCheckout()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertNull(viewModel.uiState.value.checkoutState.errorMessage)
+        assertEquals(1, repository.insertedTransaksiList.size)
+
+        val updatedBarang = repository.barangFlow.value.find { it.barang.id == 10 }
+        assertNotNull(updatedBarang)
+        assertEquals(-2, updatedBarang!!.barang.stok)
+    }
+
+    @Test
+    fun testStockReductionOnCheckoutPositiveStock() = runTest {
+        val viewModel = PosViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val item10Stock = BarangWithHargaGrosir(
+            barang = baseBarang.copy(id = 11, stok = 10),
+            hargaGrosirList = emptyList()
+        )
+        repository.barangFlow.value = listOf(item10Stock)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.addToCart(item10Stock, 3)
+        viewModel.openCheckoutDialog()
+        viewModel.updatePaymentMethod("TUNAI")
+        viewModel.updateNominalPaid("30000")
+
+        viewModel.processCheckout()
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        val updatedBarang = repository.barangFlow.value.find { it.barang.id == 11 }
+        assertNotNull(updatedBarang)
+        assertEquals(7, updatedBarang!!.barang.stok)
+    }
+
+    @Test
+    fun testAddQuickProductDefaultStockIsZero() = runTest {
+        val viewModel = PosViewModel(repository)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        viewModel.openQuickProductDialog()
+        viewModel.addQuickProduct("Es Teh", 5000.0)
+        testDispatcher.scheduler.advanceUntilIdle()
+
+        assertEquals(1, repository.insertedBarangList.size)
+        assertEquals(0, repository.insertedBarangList[0].stok)
+        assertEquals(0, repository.lastTambahBarangCepatStok)
     }
 }

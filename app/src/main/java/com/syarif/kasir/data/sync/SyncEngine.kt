@@ -290,7 +290,10 @@ class SyncEngine(
         val kategori = (map["kategori"] ?: map["category"])?.toString()
         val hargaBeli = parseDoubleValue(map["harga_beli"] ?: map["hargaBeli"] ?: map["hb"] ?: map["harga_pokok"]) ?: 0.0
         val hargaJual = parseDoubleValue(map["harga_jual"] ?: map["hargaJual"] ?: map["hj"] ?: map["harga"] ?: map["price"]) ?: 0.0
-        val stok = parseIntValue(map["stok"] ?: map["stock"] ?: map["qty"] ?: map["jumlah"]) ?: 0
+        val stok = parseIntValue(map["stok"])
+        val stock = parseIntValue(map["stock"])
+        val qty = parseIntValue(map["qty"])
+        val jumlah = parseIntValue(map["jumlah"])
         val satuan = (map["satuan"] ?: map["unit"])?.toString() ?: "pcs"
         val barcode = (map["barcode"] ?: map["kode_barcode"])?.toString()
         val isArchived = parseBooleanValue(map["is_archived"] ?: map["isArchived"] ?: map["archived"])
@@ -306,6 +309,9 @@ class SyncEngine(
             hargaBeli = hargaBeli,
             hargaJual = hargaJual,
             stok = stok,
+            stock = stock,
+            qty = qty,
+            jumlah = jumlah,
             satuan = satuan,
             barcode = barcode,
             hargaGrosirList = grosirList,
@@ -610,7 +616,7 @@ class SyncEngine(
                             kategori = dto.kategori ?: "",
                             hargaBeli = dto.hargaBeli ?: 0.0,
                             hargaJual = dto.hargaJual ?: 0.0,
-                            stok = dto.stok ?: 0,
+                            stok = dto.effectiveStok,
                             satuan = dto.satuan ?: "pcs",
                             barcode = dto.barcode,
                             isSynced = true,

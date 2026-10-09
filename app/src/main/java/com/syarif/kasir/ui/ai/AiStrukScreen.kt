@@ -38,10 +38,15 @@ import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.core.content.FileProvider
 import coil.compose.AsyncImage
+import com.google.mlkit.vision.common.InputImage
+import com.google.mlkit.vision.text.TextRecognition
+import com.google.mlkit.vision.text.latin.TextRecognizerOptions
 import com.syarif.kasir.ui.pos.PosViewModel
 import com.syarif.kasir.util.GeminiStrukScanner
 import com.syarif.kasir.util.ParsedReceiptItem
+import com.syarif.kasir.util.StrukOcrParser
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.suspendCancellableCoroutine
 import java.io.File
 
 data class EditableReceiptItem(
@@ -325,10 +330,32 @@ fun AiStrukScreen(
                                             )
                                         }
                                         viewModel.setAiAnalyzing(false)
-                                        Toast.makeText(context, "Berhasil memindai ${items.size} item. Silakan tinjau & revisi.", Toast.LENGTH_SHORT).show()
-                                    } catch (e: Exception) {
+                                        if (items.isNotEmpty()) {
+                                            Toast.makeText(context, "Berhasil memindai ${items.size} item. Silakan tinjau & revisi.", Toast.LENGTH_SHORT).show()
+                                        } else {
+                                            Toast.makeText(context, "Tidak ada item terdeteksi. Silakan tambah manual.", Toast.LENGTH_SHORT).show()
+                                        }
+                                    } catch (_: Exception) {
                                         viewModel.setAiAnalyzing(false)
-                                        Toast.makeText(context, "Gagal memindai struk AI: ${e.message}", Toast.LENGTH_LONG).show()
+                                        try {
+                                            val image = InputImage.fromFilePath(context, uri)
+                                            val recognizer = TextRecognition.getClient(TextRecognizerOptions.DEFAULT_OPTIONS)
+                                            val visionText = recognizer.process(image).await()
+                                            val offlineItems = StrukOcrParser.parse(visionText.text)
+                                            reviewedItems.clear()
+                                            offlineItems.forEach { item ->
+                                                reviewedItems.add(
+                                                    EditableReceiptItem(
+                                                        namaBarang = item.namaBarang,
+                                                        qty = item.quantity.toString(),
+                                                        harga = item.harga.toInt().toString()
+                                                    )
+                                                )
+                                            }
+                                            Toast.makeText(context, "Beralih ke Offline OCR (ML Kit) - ${offlineItems.size} item ditemukan.", Toast.LENGTH_SHORT).show()
+                                        } catch (_: Exception) {
+                                            Toast.makeText(context, "Silakan masukkan item secara manual.", Toast.LENGTH_SHORT).show()
+                                        }
                                     }
                                 }
                             },
@@ -559,6 +586,19 @@ fun AiStrukScreen(
                     }
                 }
             }
+        }
+    }
+}
+
+private suspend fun <T> com.google.android.gms.tasks.Task<T>.await(): T = suspendCancellableCoroutine { continuation ->
+    addOnSuccessListener { result ->
+        if (continuation.isActive) {
+            continuation.resumeWith(Result.success(result))
+        }
+    }
+    addOnFailureListener { exception ->
+        if (continuation.isActive) {
+            continuation.resumeWith(Result.failure(exception))
         }
     }
 }

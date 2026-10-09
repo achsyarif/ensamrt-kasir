@@ -173,8 +173,8 @@ class BarangViewModel(
         val tiers = item.hargaGrosirList.map { hg ->
             TieredPriceFormState(
                 id = hg.id,
-                minQty = hg.minQty.toString(),
-                hargaGrosir = if (hg.hargaGrosir % 1.0 == 0.0) hg.hargaGrosir.toLong().toString() else hg.hargaGrosir.toString()
+                minQty = if (hg.minQty == 0) "" else hg.minQty.toString(),
+                hargaGrosir = if (hg.hargaGrosir == 0.0) "" else if (hg.hargaGrosir % 1.0 == 0.0) hg.hargaGrosir.toLong().toString() else hg.hargaGrosir.toString()
             )
         }
 
@@ -187,9 +187,9 @@ class BarangViewModel(
                     kodeBarang = barang.kodeBarang,
                     namaBarang = barang.namaBarang,
                     kategori = barang.kategori,
-                    hargaBeli = if (barang.hargaBeli % 1.0 == 0.0) barang.hargaBeli.toLong().toString() else barang.hargaBeli.toString(),
-                    hargaJual = if (barang.hargaJual % 1.0 == 0.0) barang.hargaJual.toLong().toString() else barang.hargaJual.toString(),
-                    stok = barang.stok.toString(),
+                    hargaBeli = if (barang.hargaBeli == 0.0) "" else if (barang.hargaBeli % 1.0 == 0.0) barang.hargaBeli.toLong().toString() else barang.hargaBeli.toString(),
+                    hargaJual = if (barang.hargaJual == 0.0) "" else if (barang.hargaJual % 1.0 == 0.0) barang.hargaJual.toLong().toString() else barang.hargaJual.toString(),
+                    stok = if (barang.stok == 0) "" else barang.stok.toString(),
                     satuan = barang.satuan,
                     barcode = barang.barcode ?: "",
                     tieredPrices = tiers
